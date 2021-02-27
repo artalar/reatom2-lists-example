@@ -1,18 +1,17 @@
 import React from "react";
-import ReactDOM from "react-dom";
-import { Atom, createStore, IActionCreator, IAtom, IStore } from "@reatom/core";
+import { Atom } from "@reatom/core";
 import { useAction, useAtom } from "./internal";
 import { createRole, IRoleAtom, rolesAtom } from "./model";
 
 export function RoleForm() {
-  const updateRoles = useAction(rolesAtom.update);
+  const handleCreate = useAction(createRole);
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
         const input = e.currentTarget.querySelector("input");
-        updateRoles((s) => [...s, createRole(input.value)]);
+        handleCreate(input.value);
         input.value = "";
       }}
     >

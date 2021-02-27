@@ -1,18 +1,17 @@
 import React from "react";
-import ReactDOM from "react-dom";
-import { Atom, createStore, IActionCreator, IAtom, IStore } from "@reatom/core";
+import { Atom } from "@reatom/core";
 import { useAction, useAtom } from "./internal";
 import { createUser, IUserAtom, usersAtom } from "./model";
 
 export function UserForm() {
-  const updateUsers = useAction(usersAtom.update);
+  const handleCreate = useAction(createUser);
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
         const input = e.currentTarget.querySelector("input");
-        updateUsers((s) => [...s, createUser(input.value)]);
+        handleCreate(input.value);
         input.value = "";
       }}
     >

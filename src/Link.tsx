@@ -1,58 +1,31 @@
 import React from "react";
-import ReactDOM from "react-dom";
-import { Atom, createStore, IActionCreator, IAtom, IStore } from "@reatom/core";
-import { storeContext, useAtom } from "./internal";
-import { rolesAtom, usersAtom } from "./model";
+import { useAction, useAtom } from "./internal";
+import { entitiesAtom, link } from "./model";
 
 export function Link() {
-  const store = React.useContext(storeContext);
-  const users = useAtom(() =>
-    Atom(($) =>
-      $(usersAtom).map((atom, index) => ({
-        atom,
-        index,
-        name: $(atom).name
-      }))
-    )
-  );
-  const roles = useAtom(() =>
-    Atom(($) =>
-      $(rolesAtom).map((atom, index) => ({
-        atom,
-        index,
-        name: $(atom).name
-      }))
-    )
+  const { users, roles } = useAtom(entitiesAtom);
+  const handleLink = useAction(
+    (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const userIndex = +e.currentTarget.querySelector<HTMLSelectElement>(
+        '[aria-label="users"]'
+      ).value;
+      const userAtom = users[userIndex].atom;
+
+      const roleIndex = +e.currentTarget.querySelector<HTMLSelectElement>(
+        '[aria-label="roles"]'
+      ).value;
+      const roleAtom = roles[roleIndex].atom;
+
+      return link(userAtom, roleAtom);
+    },
+    [users, roles]
   );
 
   return (
     <>
       <h4>Link</h4>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const userIndex = +e.currentTarget.querySelector<HTMLSelectElement>(
-            '[aria-label="users"]'
-          ).value;
-          const userAtom = users[userIndex].atom;
-
-          const roleIndex = +e.currentTarget.querySelector<HTMLSelectElement>(
-            '[aria-label="roles"]'
-          ).value;
-          const roleAtom = roles[roleIndex].atom;
-
-          store.dispatch([
-            userAtom.update((s) => ({
-              ...s,
-              roles: [...new Set(s.roles).add(roleAtom)]
-            })),
-            roleAtom.update((s) => ({
-              ...s,
-              users: [...new Set(s.users).add(userAtom)]
-            }))
-          ]);
-        }}
-      >
+      <form onSubmit={handleLink}>
         Users:{" "}
         <select aria-label="users">
           {users.map(({ name, index }) => (
@@ -65,7 +38,9 @@ export function Link() {
             <option value={index}>{name}</option>
           ))}
         </select>
-        <button type="submit">Link</button>
+        <button type="submit" disabled={!users.length || !roles.length}>
+          Link
+        </button>
       </form>
     </>
   );

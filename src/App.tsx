@@ -1,10 +1,10 @@
 import React from "react";
-import ReactDOM from "react-dom";
-import { Atom, createStore, IActionCreator, IAtom, IStore } from "@reatom/core";
+import { createStore } from "@reatom/core";
 import { storeContext } from "./internal";
 import { UserForm, Users } from "./Users";
 import { RoleForm, Roles } from "./Roles";
 import { Link } from "./Link";
+import { Snapshots } from "./Snapshots";
 
 export default function App() {
   return (
@@ -14,6 +14,7 @@ export default function App() {
       <Users />
       <Roles />
       <Link />
+      <Snapshots />
     </storeContext.Provider>
   );
 }
