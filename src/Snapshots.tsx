@@ -1,9 +1,9 @@
 import React from "react";
-import { useAtom } from "./internal";
+import { useAtom } from "@reatom/react";
 import { snapshotsAtom } from "./model";
 
 export function Snapshots() {
-  const snapshots = useAtom(snapshotsAtom);
+  const [snapshots] = useAtom(snapshotsAtom);
 
   return (
     <>

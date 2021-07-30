@@ -1,48 +1,72 @@
-import { Action, Atom, IAtom } from "@reatom/core";
+import { createAtom, Atom } from "@reatom/core";
+import { atom } from "@reatom/core/experiments";
+import { withDebounce } from "./utils";
 
-export type IUser = {
+export type User = {
   name: string;
-  roles: Array<IAtom<IRole>>;
+  roles: Array<Atom<Role>>;
 };
-export type IRole = {
+export type Role = {
   name: string;
-  users: Array<IAtom<IUser>>;
+  users: Array<Atom<User>>;
 };
 
-export function createUserAtom(
-  name: IUser["name"],
-  roles: IUser["roles"] = []
-) {
-  const atom = Atom.from<IUser>({ name, roles });
-  atom.displayName = name;
-  return atom;
+export function createUserAtom(name: User["name"], roles: User["roles"] = []) {
+  const userAtom = atom(
+    { name, roles } as User,
+    {
+      addRole: ({ name, roles }, roleAtom: Atom<Role>) => ({
+        name,
+        roles: [...new Set(roles).add(roleAtom)]
+      }),
+      changeName: ({ roles }, name: string) => ({ name, roles })
+    },
+    { id: `role ${name}` }
+  );
+  return userAtom;
 }
 
-export function createRoleAtom(
-  name: IRole["name"],
-  users: IRole["users"] = []
-) {
-  const atom = Atom.from<IRole>({ name, users });
-  atom.displayName = name;
-  return atom;
+export function createRoleAtom(name: Role["name"], users: Role["users"] = []) {
+  const roleAtom = atom(
+    { name, users } as Role,
+    {
+      addUser: ({ name, users }, userAtom: Atom<User>) => ({
+        name,
+        users: [...new Set(users).add(userAtom)]
+      }),
+      changeName: ({ users }, name: string) => ({ name, users })
+    },
+    { id: `user ${name}` }
+  );
+  return roleAtom;
 }
 
-export type IUserAtom = ReturnType<typeof createUserAtom>;
-export type IRoleAtom = ReturnType<typeof createRoleAtom>;
+export type UserAtom = ReturnType<typeof createUserAtom>;
+export type RoleAtom = ReturnType<typeof createRoleAtom>;
 
-export const usersAtom = Atom.from(new Array<IUserAtom>());
-export const rolesAtom = Atom.from(new Array<IRoleAtom>());
+export const usersAtom = createAtom(
+  { create: (name: string) => name },
+  ($, state = new Array<UserAtom>()) => {
+    $({ create: (name) => (state = [...state, createUserAtom(name)]) });
+    return state;
+  },
+  {
+    id: "users"
+  }
+);
 
-export const createUser = Action((name: string) => ({
-  payload: usersAtom.update((s) => [...s, createUserAtom(name)]).payload
-}));
-createUser.type = usersAtom.update.type;
-export const createRole = Action((name: string) => ({
-  payload: rolesAtom.update((s) => [...s, createRoleAtom(name)]).payload
-}));
-createRole.type = rolesAtom.update.type;
+export const rolesAtom = createAtom(
+  { create: (name: string) => name },
+  ($, state = new Array<RoleAtom>()) => {
+    $({ create: (name) => (state = [...state, createRoleAtom(name)]) });
+    return state;
+  },
+  {
+    id: "roles"
+  }
+);
 
-export const entitiesAtom = Atom(($) => ({
+export const entitiesAtom = createAtom({}, ($) => ({
   users: $(usersAtom).map((atom, index) => ({
     atom,
     index,
@@ -55,34 +79,28 @@ export const entitiesAtom = Atom(($) => ({
   }))
 }));
 
-export const snapshotsAtom = Atom(($, state = new Array<string>()) => {
-  const roles = $(rolesAtom).map((role) => {
-    const { name, users } = $(role);
-    return {
-      name,
-      users: users.map((userAtom) => userAtom.displayName)
-    };
-  });
-  const users = $(usersAtom).map((user) => {
-    const { name, roles } = $(user);
-    return {
-      name,
-      roles: roles.map((roleAtom) => roleAtom.displayName)
-    };
-  });
-
-  return [...state, JSON.stringify({ roles, users }, null, 2)];
-});
-
-export function link(userAtom: IUserAtom, roleAtom: IRoleAtom) {
-  return [
-    userAtom.update((s) => ({
-      ...s,
-      roles: [...new Set(s.roles).add(roleAtom)]
-    })),
-    roleAtom.update((s) => ({
-      ...s,
-      users: [...new Set(s.users).add(userAtom)]
-    }))
-  ];
+export function link(userAtom: UserAtom, roleAtom: RoleAtom) {
+  return [userAtom.addRole(roleAtom), roleAtom.addUser(userAtom)];
 }
+
+export const snapshotsAtom = withDebounce(
+  1000,
+  createAtom({}, ($, state = new Array<string>()) => {
+    const roles = $(rolesAtom).map((role) => {
+      const { name, users } = $(role);
+      return {
+        name,
+        users: users.map((userAtom) => userAtom.id)
+      };
+    });
+    const users = $(usersAtom).map((user) => {
+      const { name, roles } = $(user);
+      return {
+        name,
+        roles: roles.map((roleAtom) => roleAtom.id)
+      };
+    });
+
+    return (state = [...state, JSON.stringify({ roles, users }, null, 2)]);
+  })
+);

@@ -1,10 +1,10 @@
-import React from "react";
-import { Atom } from "@reatom/core";
-import { useAction, useAtom } from "./internal";
-import { createUser, IUserAtom, usersAtom } from "./model";
+import React, { useMemo } from "react";
+import { useAction, useAtom } from "@reatom/react";
+import { UserAtom, usersAtom } from "./model";
+import { createAtom } from "@reatom/core";
 
 export function UserForm() {
-  const handleCreate = useAction(createUser);
+  const handleCreate = useAction(usersAtom.create);
 
   return (
     <form
@@ -23,16 +23,22 @@ export function UserForm() {
   );
 }
 
-export function User({ atom }: { atom: IUserAtom }) {
-  const { name } = useAtom(() => atom);
-  const roles = useAtom(() =>
-    Atom(($) =>
-      $(atom)
-        .roles.map((roleAtom) => $(roleAtom).name)
-        .join(", ")
+export function User({ atom }: { atom: UserAtom }) {
+  const [{ name }, { changeName }] = useAtom(atom);
+  const [roles] = useAtom(
+    useMemo(
+      () =>
+        createAtom(
+          {},
+          ($) =>
+            $(atom)
+              .roles.map((roleAtom) => $(roleAtom).name)
+              .join(", "),
+          { id: `${name} roles` }
+        ),
+      [atom, name]
     )
   );
-  const update = useAction(atom.update);
 
   return (
     <li>
@@ -40,9 +46,7 @@ export function User({ atom }: { atom: IUserAtom }) {
         User name:{" "}
         <input
           value={name}
-          onChange={(e) =>
-            update((s) => ({ ...s, name: e.currentTarget.value }))
-          }
+          onChange={(e) => changeName(e.currentTarget.value)}
         />
       </label>
       <br />
@@ -52,7 +56,7 @@ export function User({ atom }: { atom: IUserAtom }) {
 }
 
 export function Users() {
-  const users = useAtom(() => usersAtom);
+  const [users] = useAtom(usersAtom);
 
   return (
     <ul>

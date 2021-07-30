@@ -1,9 +1,9 @@
 import React from "react";
-import { useAction, useAtom } from "./internal";
+import { useAction, useAtom } from "@reatom/react";
 import { entitiesAtom, link } from "./model";
 
 export function Link() {
-  const { users, roles } = useAtom(entitiesAtom);
+  const [{ users, roles }] = useAtom(entitiesAtom);
   const handleLink = useAction(
     (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
